@@ -1,0 +1,29 @@
+---
+title: Download Veer
+description: Install the Veer toolchain on macOS, Windows, or Linux.
+---
+
+import Download from '../../components/Download.astro';
+
+The `veer` binary is self-contained: no runtime dependencies and no GPU required. The simulated engine runs anywhere, and the HTTP engine talks to any OpenAI-compatible server (SGLang, vLLM, llama.cpp).
+
+<Download />
+
+## Verify the install
+
+```sh
+veer --version
+veer explain V0101
+```
+
+## What's in the download
+
+Each archive contains the `veer` binary, the `examples/` folder used throughout these docs, and the license. Run an example straight away:
+
+```sh
+veer run examples/review.veer --stats
+```
+
+## Uninstall
+
+The shell and PowerShell installers put `veer` in `~/.cargo/bin` (or `%USERPROFILE%\.cargo\bin`). Delete that file to uninstall. MSI installs can be removed from *Apps & features*.

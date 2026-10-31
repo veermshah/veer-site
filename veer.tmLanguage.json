@@ -1,0 +1,21 @@
+{
+  "name": "veer",
+  "scopeName": "source.veer",
+  "aliases": ["vr"],
+  "patterns": [
+    { "name": "comment.line.double-slash.veer", "match": "//.*$" },
+    { "name": "string.quoted.double.veer", "begin": "\"", "end": "\"", "patterns": [{ "name": "constant.character.escape.veer", "match": "\\\\." }] },
+    { "name": "entity.name.tag.span.veer", "match": "#\\[[A-Za-z_][A-Za-z0-9_]*\\]" },
+    { "name": "storage.modifier.attribute.veer", "match": "@(budget|accuracy)\\b" },
+    { "name": "keyword.control.veer", "match": "\\b(if|else|for|in|return|commit|rollback|speculate)\\b" },
+    { "name": "keyword.other.context.veer", "match": "\\b(open|fork|gen|splice|drop|max|as|json|choice|stop|at|with)\\b" },
+    { "name": "storage.type.veer", "match": "\\b(model|prefix|tool|schema|const|fn|let)\\b" },
+    { "name": "support.type.veer", "match": "\\b(str|int|float|bool|Ctx|Tensor)\\b" },
+    { "name": "support.constant.format.veer", "match": "\\b(f32|bf16|f16|fp8_e4m3|fp8_e5m2|int8|mxfp4|mxfp4_oas|nvfp4)\\b" },
+    { "name": "constant.language.veer", "match": "\\b(true|false)\\b" },
+    { "name": "constant.numeric.veer", "match": "\\b[0-9][0-9_]*(\\.[0-9]+)?([eE][-+]?[0-9]+)?(KiB|MiB|GiB|TiB|KB|MB|GB|B)?\\b" },
+    { "name": "support.function.veer", "match": "\\b(print|len|contains|to_str|trim|rand_uniform|zeros|quant|matmul|add|scale|relu|silu|measured_err|report)\\b(?=\\s*\\()" },
+    { "name": "entity.name.function.veer", "match": "\\b[a-z_][A-Za-z0-9_]*(?=\\s*\\()" },
+    { "name": "keyword.operator.veer", "match": "\\+\\+|\\|>|->|<=|>=|==|!=|&&|\\|\\||[-+*/@<>=!]" }
+  ]
+}

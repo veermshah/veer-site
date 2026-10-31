@@ -1,0 +1,98 @@
+---
+title: Veer
+description: A language where LLM contexts are typed, linear values and the compiler proves KV-cache memory, cost, and numeric accuracy.
+template: splash
+hero:
+  tagline: A programming language for LLM inference where the KV cache is a typed value. The compiler proves how much GPU memory your agent needs, what it costs to run, and how much accuracy quantization can lose, before anything runs.
+  image:
+    file: ../../assets/logo.svg
+  actions:
+    - text: Download
+      link: /download/
+      icon: download
+    - text: Learn the background
+      link: /learn/
+      icon: open-book
+      variant: secondary
+    - text: Tutorial
+      link: /tutorial/contexts/
+      icon: right-arrow
+      variant: minimal
+---
+
+import { Card, CardGrid } from '@astrojs/starlight/components';
+
+## The problem
+
+Every LLM agent, RAG pipeline, and tree-of-thought search builds and reuses **KV cache**, the GPU memory that holds the model's view of everything it has read so far. Today that memory is managed *at runtime*, by heuristics:
+
+- Serving engines guess which prefixes to keep (LRU over a radix tree). [KVFlow](/research/) showed that LRU often evicts a cache right before it is needed again.
+- Agents that want to *edit* their history (drop a huge tool output, rewrite a plan) usually re-prefill everything after the edit. [Leyline](/research/) showed this is avoidable, but only through low-level directives.
+- Nobody can tell you, before running, how much KV memory a program needs, and quantization accuracy is checked only by running evals.
+
+## The idea
+
+In Veer, a context is a **linear value**: every operation consumes it and returns a new one. That one rule lets the compiler see the whole lifetime of every KV cache, so it can **prove** things that runtimes can only guess:
+
+```veer
+model llama = "meta-llama/Llama-3.1-8B-Instruct" { layers: 32, kv_heads: 8, head_dim: 128, kv: fp8_e4m3 }
+prefix SYS: llama = "You are a careful senior code reviewer."
+schema Bugs { count: int, items: [str<=80; <=8] }
+
+fn looks_valid(p: str<=64) -> bool { return contains(p, "fix") }
+
+@budget(kv = 2GiB, prefill = 12000)
+fn review(doc: str<=4096) -> str<=384 {
+  let c = open SYS ++ "\n<document>\n" ++ #[doc] doc ++ "\n</document>\n"
+  let (a, b) = fork c                                  // shared prefix: zero copy, proven
+  let (a, summary) = gen a ++ "Summarize the change:" max 128
+  drop a
+  let (b, bugs) = gen b ++ "List the bugs as JSON:" max 256 as json<Bugs>
+  let b = splice b at doc with "<document elided>"     // edit the KV cache in place
+  let (b, patch) = speculate b {                        // transactional: commit or roll back
+    let (b, p) = gen b ++ "Propose a one-line patch:" max 64
+    if looks_valid(p) { commit (b, p) } else { rollback "no patch" }
+  }
+  drop b
+  return summary + " | patch: " + patch
+}
+```
+
+```text
+$ veer plan review.veer --entry review
+plan for `review`
+  model llama      kv=fp8_e4m3 · 64.00 KiB/token · page 16 tok · max_ctx 131,072
+  peak KV memory    301.00 MiB  (budget 2.00 GiB ✓)  at line 26
+  prefill tokens    ≤ 4,549  (budget 12,000 ✓)
+  decode tokens     ≤ 448
+  fork  line 21    shares 4,173 tokens, saves 262.00 MiB vs copying
+  splice line 26   at `doc` re-prefills ≤ 291 tokens
+```
+
+Forget a `drop` and the program does not compile (you would have leaked GPU memory). Exceed the budget and it does not compile. Use a context after it was consumed and it does not compile.
+
+<CardGrid>
+	<Card title="Linear contexts" icon="seti:lock">
+		`fork`, `++`, `gen`, `splice`, `speculate` and `drop` are the only ways to touch a KV cache, and each consumes its input. Leaks and use-after-free are compile errors.
+	</Card>
+	<Card title="A static KV planner" icon="seti:db">
+		An abstract interpreter computes a **sound upper bound** on peak KV memory, prefill and decode tokens, context length and splice cost. Property tests check it against execution.
+	</Card>
+	<Card title="Context editing and speculation" icon="pencil">
+		Labelled spans make Leyline-style KV edits type-safe. `speculate` gives transactional commit/rollback over the cache.
+	</Card>
+	<Card title="Precision types" icon="seti:config">
+		`Tensor<[64, 32], nvfp4>` carries a proven error bound. `@accuracy(rel <= 0.25)` is a compile-time contract across FP8, MXFP4, NVFP4 and INT8.
+	</Card>
+</CardGrid>
+
+## Where to go next
+
+<CardGrid>
+	<Card title="New to inference?" icon="open-book">
+		Start with [Learn the background](/learn/): seven short chapters, from "what is a token" to KV-cache math, quantization error, and linear types.
+	</Card>
+	<Card title="Ready to write code?" icon="rocket">
+		[Download](/download/) the toolchain, then follow the [Quickstart](/start/quickstart/) and the [Tutorial](/tutorial/contexts/).
+	</Card>
+</CardGrid>

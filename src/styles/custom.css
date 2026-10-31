@@ -1,0 +1,13 @@
+:root {
+	--sl-color-accent-low: #23194a;
+	--sl-color-accent: #7c5cff;
+	--sl-color-accent-high: #d4c9ff;
+	--sl-font: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+:root[data-theme='light'] {
+	--sl-color-accent-low: #e6e0ff;
+	--sl-color-accent: #5b3cc4;
+	--sl-color-accent-high: #2b1a6e;
+}
+.hero .tagline { max-width: 42rem; }
+.veer-compare { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr)); }

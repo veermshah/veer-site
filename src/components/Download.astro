@@ -1,0 +1,121 @@
+---
+const repo = 'https://github.com/veermshah/veer-site';
+const dl = `${repo}/releases/latest/download`;
+const targets = [
+	{ os: 'mac', label: 'macOS (Apple Silicon)', file: 'veer-cli-aarch64-apple-darwin.tar.xz', arch: 'arm' },
+	{ os: 'mac', label: 'macOS (Intel)', file: 'veer-cli-x86_64-apple-darwin.tar.xz', arch: 'x86' },
+	{ os: 'windows', label: 'Windows x64 installer (.msi)', file: 'veer-cli-x86_64-pc-windows-msvc.msi', arch: 'x86' },
+	{ os: 'windows', label: 'Windows x64 (.zip)', file: 'veer-cli-x86_64-pc-windows-msvc.zip', arch: 'x86' },
+	{ os: 'linux', label: 'Linux x64', file: 'veer-cli-x86_64-unknown-linux-gnu.tar.xz', arch: 'x86' },
+	{ os: 'linux', label: 'Linux ARM64', file: 'veer-cli-aarch64-unknown-linux-gnu.tar.xz', arch: 'arm' },
+];
+const sh = `curl --proto '=https' --tlsv1.2 -LsSf ${dl}/veer-cli-installer.sh | sh`;
+const ps = `powershell -ExecutionPolicy Bypass -c "irm ${dl}/veer-cli-installer.ps1 | iex"`;
+---
+
+<div class="veer-dl not-content">
+	<div class="primary">
+		<p class="detected">Detected: <strong id="veer-os">your system</strong></p>
+		<a id="veer-primary" class="btn" href={`${repo}/releases/latest`}>Download Veer</a>
+		<p class="cmd-label" id="veer-cmd-label">Or install from a terminal:</p>
+		<pre id="veer-cmd"><code>{sh}</code></pre>
+		<button id="veer-copy" class="copy" type="button">Copy command</button>
+	</div>
+	<h3>All downloads</h3>
+	<ul class="grid">
+		{
+			targets.map((t) => (
+				<li data-os={t.os} data-arch={t.arch}>
+					<a href={`${dl}/${t.file}`}>{t.label}</a>
+					<span class="file">{t.file}</span>
+				</li>
+			))
+		}
+	</ul>
+	<p class="small">
+		Every release also ships SHA-256 checksums. See <a href={`${repo}/releases`}>all releases</a>.
+	</p>
+</div>
+
+<script define:vars={{ targets, sh, ps, dl }}>
+	(async () => {
+		const ua = navigator.userAgent || '';
+		const plat = (navigator.userAgentData && navigator.userAgentData.platform) || navigator.platform || '';
+		let os = 'linux';
+		if (/mac|iphone|ipad/i.test(plat) || /Mac OS X/.test(ua)) os = 'mac';
+		else if (/win/i.test(plat) || /Windows/.test(ua)) os = 'windows';
+		let arch = os === 'mac' ? 'arm' : 'x86';
+		try {
+			if (navigator.userAgentData && navigator.userAgentData.getHighEntropyValues) {
+				const v = await navigator.userAgentData.getHighEntropyValues(['architecture']);
+				if (v.architecture) arch = v.architecture.startsWith('arm') ? 'arm' : 'x86';
+			}
+		} catch (_) {}
+		if (os === 'linux' && /aarch64|arm64/i.test(ua + plat)) arch = 'arm';
+		const pick = targets.find((t) => t.os === os && t.arch === arch) || targets.find((t) => t.os === os);
+		const names = { mac: 'macOS', windows: 'Windows', linux: 'Linux' };
+		document.getElementById('veer-os').textContent = `${names[os]} (${arch === 'arm' ? 'ARM64' : 'x64'})`;
+		const btn = document.getElementById('veer-primary');
+		btn.href = `${dl}/${pick.file}`;
+		btn.textContent = `Download for ${pick.label}`;
+		const cmd = os === 'windows' ? ps : sh;
+		document.getElementById('veer-cmd').firstChild.textContent = cmd;
+		document.getElementById('veer-cmd-label').textContent = os === 'windows' ? 'Or install from PowerShell:' : 'Or install from a terminal:';
+		document.querySelectorAll('.veer-dl li').forEach((li) => {
+			if (li.dataset.os === os) li.classList.add('match');
+		});
+		document.getElementById('veer-copy').addEventListener('click', async (e) => {
+			try {
+				await navigator.clipboard.writeText(cmd);
+				e.target.textContent = 'Copied';
+			} catch (_) {
+				e.target.textContent = 'Select and copy above';
+			}
+		});
+	})();
+</script>
+
+<style>
+	.veer-dl { margin-top: 1.5rem; }
+	.primary {
+		border: 1px solid var(--sl-color-gray-5);
+		border-radius: 0.75rem;
+		padding: 1.5rem;
+		background: var(--sl-color-accent-low);
+	}
+	.detected { margin: 0 0 0.75rem; color: var(--sl-color-gray-2); }
+	.btn {
+		display: inline-block;
+		padding: 0.75rem 1.25rem;
+		border-radius: 0.5rem;
+		background: var(--sl-color-accent);
+		color: var(--sl-color-black);
+		font-weight: 600;
+		text-decoration: none;
+	}
+	:root[data-theme='light'] .btn { color: #fff; }
+	.cmd-label { margin: 1.25rem 0 0.4rem; }
+	pre {
+		margin: 0;
+		padding: 0.75rem 1rem;
+		border-radius: 0.5rem;
+		background: var(--sl-color-gray-6);
+		overflow-x: auto;
+		font-size: 0.85rem;
+	}
+	.copy {
+		margin-top: 0.5rem;
+		padding: 0.35rem 0.75rem;
+		border-radius: 0.4rem;
+		border: 1px solid var(--sl-color-gray-4);
+		background: transparent;
+		color: inherit;
+		cursor: pointer;
+	}
+	h3 { margin-top: 2rem; }
+	.grid { list-style: none; padding: 0; display: grid; gap: 0.5rem; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); }
+	.grid li { border: 1px solid var(--sl-color-gray-5); border-radius: 0.5rem; padding: 0.75rem 1rem; display: flex; flex-direction: column; gap: 0.25rem; }
+	.grid li.match { border-color: var(--sl-color-accent); }
+	.file { font-family: var(--sl-font-mono); font-size: 0.75rem; color: var(--sl-color-gray-3); word-break: break-all; }
+	.small { font-size: 0.85rem; color: var(--sl-color-gray-3); }
+</style>
