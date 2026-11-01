@@ -1,0 +1,174 @@
+---
+import hello from '../examples/hello.veer?raw';
+import review from '../examples/review.veer?raw';
+import tot from '../examples/tree_of_thought.veer?raw';
+import agent from '../examples/agent_edit_history.veer?raw';
+import rag from '../examples/rag.veer?raw';
+import quant from '../examples/quant_mlp.veer?raw';
+
+const examples = {
+	'hello.veer': hello,
+	'review.veer': review,
+	'tree_of_thought.veer': tot,
+	'agent_edit_history.veer': agent,
+	'rag.veer': rag,
+	'quant_mlp.veer': quant,
+};
+---
+
+<div class="pg not-content">
+	<div class="bar">
+		<label>
+			Example
+			<select id="pg-example">
+				{Object.keys(examples).map((k) => <option value={k}>{k}</option>)}
+			</select>
+		</label>
+		<div class="actions">
+			<button data-cmd="check" type="button">Check</button>
+			<button data-cmd="plan" type="button">Plan</button>
+			<button data-cmd="types" type="button">Types</button>
+			<button data-cmd="run" type="button" class="primary">Run</button>
+			<button id="pg-share" type="button" class="ghost">Copy link</button>
+		</div>
+	</div>
+	<textarea id="pg-code" spellcheck="false" autocapitalize="off" autocomplete="off" aria-label="Veer source code"></textarea>
+	<div class="out-head"><span id="pg-status">Loading compiler…</span></div>
+	<pre id="pg-out" aria-live="polite"></pre>
+</div>
+
+<script define:vars={{ examples }}>
+	const $ = (id) => document.getElementById(id);
+	const code = $('pg-code');
+	const out = $('pg-out');
+	const status = $('pg-status');
+	const select = $('pg-example');
+
+	const fromHash = () => {
+		const m = location.hash.match(/^#code=(.+)$/);
+		if (!m) return null;
+		try {
+			return decodeURIComponent(escape(atob(m[1].replace(/-/g, '+').replace(/_/g, '/'))));
+		} catch (_) {
+			return null;
+		}
+	};
+	const toHash = (s) => btoa(unescape(encodeURIComponent(s))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+
+	let saved = null;
+	try { saved = localStorage.getItem('veer-playground'); } catch (_) {}
+	code.value = fromHash() ?? saved ?? examples['review.veer'];
+	select.value = Object.keys(examples).find((k) => examples[k] === code.value) ?? 'review.veer';
+
+	select.addEventListener('change', () => {
+		code.value = examples[select.value];
+		out.textContent = '';
+		history.replaceState(null, '', location.pathname);
+	});
+	code.addEventListener('input', () => {
+		try { localStorage.setItem('veer-playground', code.value); } catch (_) {}
+	});
+	code.addEventListener('keydown', (e) => {
+		if (e.key === 'Tab') {
+			e.preventDefault();
+			const { selectionStart: a, selectionEnd: b } = code;
+			code.setRangeText('  ', a, b, 'end');
+		} else if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+			e.preventDefault();
+			go('run');
+		}
+	});
+
+	let veer = null;
+	const go = (cmd) => {
+		if (!veer) return;
+		const t0 = performance.now();
+		let res;
+		try {
+			res = JSON.parse(veer[cmd](code.value));
+		} catch (err) {
+			res = { ok: false, output: String(err) };
+		}
+		out.textContent = res.output || '(no output)';
+		out.dataset.ok = res.ok ? 'yes' : 'no';
+		status.textContent = `veer ${cmd}: ${res.ok ? 'ok' : 'failed'} · ${(performance.now() - t0).toFixed(0)} ms, in your browser`;
+	};
+
+	document.querySelectorAll('.pg [data-cmd]').forEach((b) => b.addEventListener('click', () => go(b.dataset.cmd)));
+	$('pg-share').addEventListener('click', async (e) => {
+		const url = `${location.origin}${location.pathname}#code=${toHash(code.value)}`;
+		history.replaceState(null, '', url);
+		try {
+			await navigator.clipboard.writeText(url);
+			e.target.textContent = 'Link copied';
+		} catch (_) {
+			e.target.textContent = 'Link in address bar';
+		}
+		setTimeout(() => (e.target.textContent = 'Copy link'), 2000);
+	});
+
+	(async () => {
+		try {
+			const url = '/playground/veer_wasm.js';
+			const mod = await import(/* @vite-ignore */ url);
+			await mod.default();
+			veer = mod;
+			status.textContent = 'Compiler loaded (WebAssembly). Press Run or ⌘/Ctrl+Enter.';
+		} catch (err) {
+			status.textContent = 'Could not load the compiler: ' + err;
+		}
+	})();
+</script>
+
+<style>
+	.pg { margin-top: 1rem; display: flex; flex-direction: column; gap: 0.75rem; }
+	.bar { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; justify-content: space-between; }
+	label { display: flex; gap: 0.5rem; align-items: center; font-size: 0.9rem; color: var(--sl-color-gray-2); }
+	select, button {
+		font: inherit;
+		font-size: 0.9rem;
+		padding: 0.4rem 0.8rem;
+		border-radius: 0.4rem;
+		border: 1px solid var(--sl-color-gray-5);
+		background: var(--sl-color-gray-6);
+		color: var(--sl-color-white);
+		cursor: pointer;
+	}
+	.actions { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+	button.primary { background: var(--sl-color-accent); color: var(--sl-color-black); border-color: var(--sl-color-accent); font-weight: 600; }
+	:root[data-theme='light'] button.primary { color: #fff; }
+	button.ghost { background: transparent; }
+	textarea {
+		width: 100%;
+		min-height: 26rem;
+		resize: vertical;
+		font-family: var(--sl-font-mono);
+		font-size: 0.85rem;
+		line-height: 1.5;
+		padding: 0.9rem 1rem;
+		border-radius: 0.5rem;
+		border: 1px solid var(--sl-color-gray-5);
+		background: var(--sl-color-gray-7, var(--sl-color-black));
+		color: var(--sl-color-white);
+		tab-size: 2;
+		font-variant-ligatures: none;
+		white-space: pre;
+		overflow: auto;
+	}
+	.out-head { font-size: 0.8rem; color: var(--sl-color-gray-3); }
+	pre {
+		margin: 0;
+		min-height: 6rem;
+		max-height: 32rem;
+		overflow: auto;
+		padding: 0.9rem 1rem;
+		border-radius: 0.5rem;
+		font-size: 0.8rem;
+		line-height: 1.45;
+		background: var(--sl-color-gray-6);
+		border-left: 3px solid var(--sl-color-gray-4);
+		white-space: pre;
+	}
+	pre[data-ok='yes'] { border-left-color: #3fb950; }
+	pre[data-ok='no'] { border-left-color: #f85149; }
+</style>

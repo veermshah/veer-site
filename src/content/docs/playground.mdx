@@ -1,0 +1,18 @@
+---
+title: Playground
+description: Check, plan, and run Veer programs in your browser. The real compiler, compiled to WebAssembly.
+template: splash
+---
+
+import Playground from '../../components/Playground.astro';
+
+The real Veer compiler, planner, and simulated engine, compiled to WebAssembly and running in your browser. Nothing is sent to a server. Pick an example or write your own, then:
+
+- **Check**: type-check and verify budgets (`veer check`)
+- **Plan**: proven peak KV memory, prefill and decode tokens, sharing, splice costs, context DAG (`veer plan`)
+- **Types**: inferred signatures, including tensor error bounds (`veer types`)
+- **Run**: execute `main` on the simulated engine and compare measured numbers with the plan (`veer run --stats`)
+
+Try breaking things: delete a `drop`, use a context twice, lower a `@budget`, or add `@accuracy(rel <= 0.25)` to `mlp_mxfp4` in `quant_mlp.veer`.
+
+<Playground />

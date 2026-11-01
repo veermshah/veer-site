@@ -21,6 +21,7 @@ export default defineConfig({
 			lastUpdated: true,
 			sidebar: [
 				{ label: 'Download', link: '/download/' },
+				{ label: 'Playground', link: '/playground/' },
 				{
 					label: 'Start here',
 					items: [

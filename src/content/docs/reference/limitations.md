@@ -20,6 +20,5 @@ description: What Veer does not do yet, stated plainly.
 1. Tokenizer-exact bounds.
 2. Native engine integration: pass the plan's DAG and reuse hints to SGLang or vLLM schedulers, and use KV-handle APIs instead of re-sent prompts.
 3. Position-corrected `splice` on engines that support it.
-4. A WASM playground on the website (`check` and `plan` in the browser).
-5. Language server with inline plan annotations.
-6. Probabilistic error bounds, attention and softmax rules, and per-channel scales.
+4. Language server with inline plan annotations.
+5. Probabilistic error bounds, attention and softmax rules, and per-channel scales.
